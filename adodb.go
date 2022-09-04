@@ -3,7 +3,7 @@ package adodb
 import (
 	"database/sql"
 	"database/sql/driver"
-	"errors"
+	"fmt"
 	"io"
 	"math"
 
@@ -67,7 +67,8 @@ func (tx *AdodbTx) Rollback() error {
 	return nil
 }
 
-func (c *AdodbConn) exec(ctx context.Context, query string, args []namedValue) (driver.Result, error) {
+// TODO: function is unused
+func (c *AdodbConn) xxxexec(ctx context.Context, query string, args []namedValue) (driver.Result, error) {
 	s, err := c.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -325,11 +326,12 @@ func (s *AdodbStmt) Exec(args []driver.Value) (driver.Result, error) {
 }
 
 type AdodbResult struct {
-	n int64
+	n  int64
+	id int64
 }
 
 func (r *AdodbResult) LastInsertId() (int64, error) {
-	return 0, errors.New("LastInsertId not supported")
+	return int64(r.id), nil
 }
 
 func (r *AdodbResult) RowsAffected() (int64, error) {
@@ -347,7 +349,33 @@ func (s *AdodbStmt) exec(ctx context.Context, args []namedValue) (driver.Result,
 	}
 	rc.Clear()
 
-	return &AdodbResult{n: rowsAffected}, nil
+	return &AdodbResult{n: rowsAffected, id: s.lastInsertedID(ctx)}, nil
+}
+
+func (s *AdodbStmt) lastInsertedID(ctx context.Context) int64 {
+	// TODO: can this be cached?
+	sid, err := s.c.prepare(ctx, "SELECT @@IDENTITY")
+	if err != nil {
+		return -1
+	}
+	rows, err := sid.(*AdodbStmt).query(ctx, nil)
+	if err != nil {
+		return -1
+	}
+	val := []driver.Value{0}
+	if err := rows.Next(val); err != nil {
+		fmt.Printf("Cannot call next: %s\n", err)
+	}
+	rows.Close()
+	switch v := val[0].(type) {
+	case int:
+		return int64(v)
+	case int64:
+		return v
+	default:
+		fmt.Printf("Unexpected val type %t: %v\n", val[0], val)
+	}
+	return -1
 }
 
 type AdodbRows struct {
