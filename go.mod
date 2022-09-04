@@ -1,8 +1,8 @@
-module github.com/mattn/go-adodb
+module github.com/fpunkt/go-adodb
 
-go 1.14
+go 1.16
 
 require (
-	github.com/go-ole/go-ole v1.2.4
-	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
+	github.com/go-ole/go-ole v1.2.6
+	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
 )
